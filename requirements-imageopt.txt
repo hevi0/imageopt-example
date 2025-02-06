@@ -1,0 +1,9 @@
+aiohttp==3.11.11
+aiofiles==24.1.0
+fastapi==0.115.7
+gunicorn==23.0.0
+flask==3.1.0
+locust==2.32.6
+pyvips==2.2.3
+requests==2.32.3
+wand==0.6.13
