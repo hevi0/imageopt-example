@@ -98,11 +98,14 @@ class ImageOptSync(object):
         self.load()
         with open(self.state['tempfile'], 'rb') as f:
             image_binary = f.read()
+            start_proc = time.time()
             img = Image(blob=image_binary)
-
             if 'resize' in self.imageoptions.keys():
-                (height, width) = self.imageoptions['resize']
-                val = f'{width}x{height}>'
+                (width, height) = self.imageoptions['resize']
+                if height <= 0:
+                    val = f'{width}'
+                else:
+                    val = f'{width}x{height}'
                 img.transform(resize=val)
 
             if 'quality' in self.imageoptions.keys() and img.format in ['jpg', 'jpeg']:
@@ -110,8 +113,12 @@ class ImageOptSync(object):
 
             if 'webp' in self.imageoptions.keys() and self.imageoptions['webp']:
                 img.format = 'webp'
+
+            blob = img.make_blob()
+            end_proc = time.time()
+            self.state['proc_time'] = (start_proc, end_proc)
                 
-            return img.make_blob()
+            return blob
 
     def ext(self):
         return self.state['outformat'].value
@@ -165,11 +172,15 @@ class ImageOptSyncV2(ImageOptSync):
         self.load()
 
         image_binary = self.state['tempfile']
+        start_proc = time.time()
         img = Image(blob=image_binary)
 
         if 'resize' in self.imageoptions.keys():
-            (height, width) = self.imageoptions['resize']
-            val = f'{width}x{height}>'
+            (width, height) = self.imageoptions['resize']
+            if height <= 0:
+                val = f'{width}'
+            else:
+                val = f'{width}x{height}'
             img.transform(resize=val)
 
         if 'quality' in self.imageoptions.keys() and img.format in ['jpg', 'jpeg']:
@@ -177,8 +188,11 @@ class ImageOptSyncV2(ImageOptSync):
 
         if 'webp' in self.imageoptions.keys() and self.imageoptions['webp']:
             img.format = 'webp'
-            
-        return img.make_blob()
+        
+        blob = img.make_blob()
+        end_proc = time.time()
+        self.state['proc_time'] = (start_proc, end_proc)
+        return blob
 
 class ImageOptSyncV3(ImageOptSyncV2):
     def __init__(self, img: str):
@@ -210,22 +224,30 @@ class ImageOptSyncV3(ImageOptSyncV2):
     def get_bytes(self) -> bytes | None:
         self.load()
 
+        start_proc = time.time()
         img = pyvips.Image.new_from_buffer(self.state['tempfile'], options="")
         outformat = ImageFormat(self.state['outformat'])
 
         if 'resize' in self.imageoptions.keys():
-            (height, width) = self.imageoptions['resize']
-            img = img.thumbnail_image(width, height=height)
+            (width, height) = self.imageoptions['resize']
+            if height <= 0:
+                img = img.thumbnail_image(width)
+            else:
+                img = img.thumbnail_image(width, height=height)
 
         if 'webp' in self.imageoptions.keys() and self.imageoptions['webp']:
             outformat = ImageFormat.WEBP
         
         if outformat == ImageFormat.PNG:
-            return img.pngsave_buffer()
+            buffer = img.pngsave_buffer()
         elif outformat == ImageFormat.WEBP:
-            return img.webpsave_buffer()
+            buffer = img.webpsave_buffer()
         elif outformat == ImageFormat.JPEG:
             if 'quality' in self.imageoptions.keys() and outformat == ImageFormat.JPEG:
-                return img.jpegsave_buffer(Q=self.imageoptions['quality'])
+                buffer = img.jpegsave_buffer(Q=self.imageoptions['quality'])
             else:
-                return img.jpegsave_buffer()
+                buffer = img.jpegsave_buffer()
+
+        end_proc = time.time()
+        self.state['proc_time'] = (start_proc, end_proc)
+        return buffer

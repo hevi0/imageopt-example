@@ -34,27 +34,30 @@ async def perftest(images: List[str], fn: Callable[[List],List[float]], title: s
     tracemalloc.clear_traces()
     
     run_start = asyncio.get_running_loop().time()
-    fetch_times = await fn(images)
+    (fetch_times, proc_times) = await fn(images)
     run_end = asyncio.get_running_loop().time()
 
     memory = tracemalloc.get_traced_memory()
     tracemalloc.stop()
     
     fetch_times_agg = sum([(end - start) for (start, end) in fetch_times])
+    proc_times_agg = sum([(end - start) for (start, end) in proc_times])
 
     report(
         title,
         len(fetch_times),
         run_end - run_start,
         fetch_times_agg,
+        proc_times_agg,
         memory[1]
     )
 
-def report(title, num_images, runtime, fetch_times_agg, peak_mem):
+def report(title, num_images, runtime, fetch_times_agg, proc_times_agg, peak_mem):
     print(f'--- {title} ---')
     print(f'Number of image requests: {num_images}')
     print(f'Runtime: {runtime}')
     print(f'Est. time spent fetching images: {fetch_times_agg}')
+    print(f'Est. time spent optimizing images: {proc_times_agg}')
     print(f'Peak memory use: {peak_mem}\n')
 
 async def perftest1(images):
@@ -66,13 +69,16 @@ async def perftest1(images):
             with open(f'{outputdir}/{image}.{opt.ext()}', 'wb') as f:
                 f.write(opt.get_bytes())
 
-            return opt.state['request_time']
+            return opt.state
 
     fetch_times = []
+    proc_times = []
     for i in range(len(images)):
-        fetch_times.append(task(images[i]))
+        state = task(images[i])
+        proc_times.append(state['proc_time'])
+        fetch_times.append(state['request_time'])
 
-    return fetch_times
+    return fetch_times, proc_times
 
 async def perftest2(images):
     outputdir = 'output'
@@ -83,13 +89,16 @@ async def perftest2(images):
             with open(f'{outputdir}/{image}.{opt.ext()}', 'wb') as f:
                 f.write(opt.get_bytes())
 
-            return opt.state['request_time']
+            return opt.state
         
+    proc_times = []
     fetch_times = []
     for i in range(len(images)):
-        fetch_times.append(task(images[i]))
+        state = task(images[i])
+        proc_times.append(state['proc_time'])
+        fetch_times.append(state['request_time'])
 
-    return fetch_times
+    return fetch_times, proc_times
 
 async def perftest3(images):
     outputdir = 'output'
@@ -100,13 +109,16 @@ async def perftest3(images):
             with open(f'{outputdir}/{image}.{opt.ext()}', 'wb') as f:
                 f.write(opt.get_bytes())
 
-            return opt.state['request_time']
+            return opt.state
         
+    proc_times = []
     fetch_times = []
     for i in range(len(images)):
-        fetch_times.append(task(images[i]))
+        state = task(images[i])
+        proc_times.append(state['proc_time'])
+        fetch_times.append(state['request_time'])
 
-    return fetch_times
+    return fetch_times, proc_times
 
 async def perftest4(images):
     outputdir = 'output'
@@ -117,12 +129,14 @@ async def perftest4(images):
             async with aiofiles.open(f'{outputdir}/{image}.{opt.ext()}', 'wb') as f:
                 await f.write(await opt.get_bytes())
 
-        return opt.state['request_time']
+        return opt.state
 
     coros = [ task(i) for i in images ]
-    fetch_times = await asyncio.gather(*coros)
+    states = await asyncio.gather(*coros)
+    fetch_times = [s['request_time'] for s in states]
+    proc_times = [s['proc_time'] for s in states]
 
-    return fetch_times
+    return fetch_times, proc_times
 
 async def perftest5(images):
     outputdir = 'output'
@@ -133,12 +147,14 @@ async def perftest5(images):
             async with aiofiles.open(f'{outputdir}/{image}.{opt.ext()}', 'wb') as f:
                 await f.write(await opt.get_bytes())
 
-        return opt.state['request_time']
+        return opt.state
 
     coros = [ task(i) for i in images ]
-    fetch_times = await asyncio.gather(*coros)
+    states = await asyncio.gather(*coros)
+    fetch_times = [s['request_time'] for s in states]
+    proc_times = [s['proc_time'] for s in states]
 
-    return fetch_times
+    return fetch_times, proc_times
 
 async def perftest6(images):
     outputdir = 'output'
@@ -149,12 +165,14 @@ async def perftest6(images):
             async with aiofiles.open(f'{outputdir}/{image}.{opt.ext()}', 'wb') as f:
                 await f.write(await opt.get_bytes())
 
-        return opt.state['request_time']
+        return opt.state
 
     coros = [ task(i) for i in images ]
-    fetch_times = await asyncio.gather(*coros)
+    states = await asyncio.gather(*coros)
+    fetch_times = [s['request_time'] for s in states]
+    proc_times = [s['proc_time'] for s in states]
 
-    return fetch_times
+    return fetch_times, proc_times
 
 
 n = 100
@@ -171,15 +189,40 @@ async def perftest7(images):
             with open(f'{outputdir}/{image}.{opt.ext()}', 'wb') as f:
                 f.write(opt.get_bytes())
 
-            return opt.state['request_time']
+            return opt.state
 
     fetch_times = []
+    proc_times = []
     for i in range(n):
-        fetch_times.append(task(images[i % len(images)]))
+        state = task(images[i % len(images)])
+        fetch_times.append(state['request_time'])
+        proc_times.append(state['proc_time'])
 
-    return fetch_times
+    return fetch_times, proc_times
 
 async def perftest8(images):
+    outputdir = 'output'
+    async def task(image):
+        async with ImageOptAsync(f'{ORIGIN}/{image}') as opt:
+            set_optimizations(opt)
+            
+            async with aiofiles.open(f'{outputdir}/{image}.{opt.ext()}', 'wb') as f:
+                await f.write(await opt.get_bytes())
+
+        return opt.state
+
+    fetch_times = []
+    proc_times = []
+
+    for iter in range(0, n, chunksize):
+        coros = [ task(images[i%len(images)]) for i in range(chunksize) if iter + i < n]
+        states = (await asyncio.gather(*coros))
+        fetch_times.append([s['request_time'] for s in states])
+        proc_times.append([s['proc_time'] for s in states])
+
+    return flatten(fetch_times), flatten(proc_times)
+
+async def perftest9(images):
     outputdir = 'output'
     async def task(image):
         async with ImageOptAsyncV3(f'{ORIGIN}/{image}') as opt:
@@ -188,15 +231,18 @@ async def perftest8(images):
             async with aiofiles.open(f'{outputdir}/{image}.{opt.ext()}', 'wb') as f:
                 await f.write(await opt.get_bytes())
 
-        return opt.state['request_time']
+        return opt.state
 
     fetch_times = []
+    proc_times = []
 
     for iter in range(0, n, chunksize):
         coros = [ task(images[i%len(images)]) for i in range(chunksize) if iter + i < n]
-        fetch_times.append(await asyncio.gather(*coros))
+        states = (await asyncio.gather(*coros))
+        fetch_times.append([s['request_time'] for s in states])
+        proc_times.append([s['proc_time'] for s in states])
 
-    return flatten(fetch_times)
+    return flatten(fetch_times), flatten(proc_times)
 
 async def main_test_basic():
     images = os.listdir(BUCKET_DIR)
@@ -212,7 +258,8 @@ async def main_test_bulk():
     images = os.listdir(BUCKET_DIR)
 
     await perftest(images, perftest7, 'Bulk SyncIO ImageMagick (wand) with temp file')
-    await perftest(images, perftest8, 'Bulk AsyncIO libvips (pyvips) In-memory')
+    await perftest(images, perftest8, 'Bulk AsyncIO ImageMagick (wand) with temp file')
+    await perftest(images, perftest9, 'Bulk AsyncIO libvips (pyvips) In-memory')
 
 if __name__ == '__main__':
     if not os.path.exists('output'):

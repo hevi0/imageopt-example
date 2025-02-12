@@ -12,7 +12,6 @@ for i in images:
         image_cache[i] = f.read()
 
 app = FastAPI()
-#app.mount("/", StaticFiles(directory="bucket"), name="bucket")
 @app.get('/{img}')
 async def get_image_from_cache(img: str):
     if SIMULATED_LATENCY > 0.0:
