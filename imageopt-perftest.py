@@ -174,13 +174,31 @@ async def perftest6(images):
 
     return fetch_times, proc_times
 
+async def perftest7(images):
+    outputdir = 'output'
+    async def task(image):
+        async with ImageOptAsyncV4(f'{ORIGIN}/{image}') as opt:
+            set_optimizations(opt)
+            
+            async with aiofiles.open(f'{outputdir}/{image}.{opt.ext()}', 'wb') as f:
+                await f.write(await opt.get_bytes())
+
+        return opt.state
+
+    coros = [ task(i) for i in images ]
+    states = await asyncio.gather(*coros)
+    fetch_times = [s['request_time'] for s in states]
+    proc_times = [s['proc_time'] for s in states]
+
+    return fetch_times, proc_times
+
 
 n = 100
 # Don't let chunksize exceed the number of workers/cores on the origin server
 # as it makes the calculation of the time spent fetching the images
 # include excessive blocking
 chunksize = 4
-async def perftest7(images):
+async def perftest8(images):
     outputdir = 'output'
     def task(image):
         with ImageOptSync(f'{ORIGIN}/{image}') as opt:
@@ -200,7 +218,7 @@ async def perftest7(images):
 
     return fetch_times, proc_times
 
-async def perftest8(images):
+async def perftest9(images):
     outputdir = 'output'
     async def task(image):
         async with ImageOptAsync(f'{ORIGIN}/{image}') as opt:
@@ -222,7 +240,7 @@ async def perftest8(images):
 
     return flatten(fetch_times), flatten(proc_times)
 
-async def perftest9(images):
+async def perftest10(images):
     outputdir = 'output'
     async def task(image):
         async with ImageOptAsyncV3(f'{ORIGIN}/{image}') as opt:
@@ -244,8 +262,30 @@ async def perftest9(images):
 
     return flatten(fetch_times), flatten(proc_times)
 
+async def perftest11(images):
+    outputdir = 'output'
+    async def task(image):
+        async with ImageOptAsyncV4(f'{ORIGIN}/{image}') as opt:
+            set_optimizations(opt)
+            
+            async with aiofiles.open(f'{outputdir}/{image}.{opt.ext()}', 'wb') as f:
+                await f.write(await opt.get_bytes())
+
+        return opt.state
+
+    fetch_times = []
+    proc_times = []
+
+    for iter in range(0, n, chunksize):
+        coros = [ task(images[i%len(images)]) for i in range(chunksize) if iter + i < n]
+        states = (await asyncio.gather(*coros))
+        fetch_times.append([s['request_time'] for s in states])
+        proc_times.append([s['proc_time'] for s in states])
+
+    return flatten(fetch_times), flatten(proc_times)
+
 async def main_test_basic():
-    images = os.listdir(BUCKET_DIR)
+    images = [i for i in os.listdir(BUCKET_DIR) if i.endswith(('.jpeg', '.jpg', '.png', '.webp'))]
 
     await perftest(images, perftest1, 'SyncIO ImageMagick (wand) with temp file')
     await perftest(images, perftest1, 'SyncIO ImageMagick (wand) In-memory')
@@ -253,13 +293,15 @@ async def main_test_basic():
     await perftest(images, perftest4, 'AsyncIO ImageMagick (wand) with temp file')
     await perftest(images, perftest5, 'AsyncIO ImageMagick (wand) In-memory')
     await perftest(images, perftest6, 'AsyncIO libvips (pyvips) In-memory')
+    await perftest(images, perftest6, 'AsyncIO libvips (pyvips) with temp file')
 
 async def main_test_bulk():
-    images = os.listdir(BUCKET_DIR)
+    images = [i for i in os.listdir(BUCKET_DIR) if i.endswith(('.jpeg', '.jpg', '.png', '.webp'))]
 
-    await perftest(images, perftest7, 'Bulk SyncIO ImageMagick (wand) with temp file')
-    await perftest(images, perftest8, 'Bulk AsyncIO ImageMagick (wand) with temp file')
-    await perftest(images, perftest9, 'Bulk AsyncIO libvips (pyvips) In-memory')
+    await perftest(images, perftest8, 'Bulk SyncIO ImageMagick (wand) with temp file')
+    await perftest(images, perftest9, 'Bulk AsyncIO ImageMagick (wand) In-memory')
+    await perftest(images, perftest10, 'Bulk AsyncIO libvips (pyvips) In-memory')
+    await perftest(images, perftest11, 'Bulk AsyncIO libvips (pyvips) with temp file')
 
 if __name__ == '__main__':
     if not os.path.exists('output'):

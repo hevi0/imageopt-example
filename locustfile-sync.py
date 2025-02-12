@@ -36,9 +36,9 @@ class UserRequest(HttpUser):
     # run each version of the endpoint with 100 users, spawn-rate of 20 for 5 minutes
     # locust -f locustfile-sync.py --tag sync-imagemagick -u 100 -r 20 -t 5m
     # locust -f locustfile-sync.py --tag sync-imagemagick-notemp -u 100 -r 20 -t 5m
-    # locust -f locustfile-sync.py --tag sync-pyvips-notemp -u 100 -r 20 -t 5m
+    # locust -f locustfile-sync.py --tag sync-libvips-notemp -u 100 -r 20 -t 5m
 
     # run each version of the endpoint with 10 users, spawn-rate of 2 for 5 minutes
     # locust -f locustfile-sync.py --tag sync-imagemagick -u 10 -r 2 -t 5m
     # locust -f locustfile-sync.py --tag sync-imagemagick-notemp -u 10 -r 2 -t 5m
-    # locust -f locustfile-sync.py --tag sync-pyvips-notemp -u 10 -r 2 -t 5m
+    # locust -f locustfile-sync.py --tag sync-libvips-notemp -u 10 -r 2 -t 5m

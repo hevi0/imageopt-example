@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Response, Request
 import os
-from imageopt_async import ImageOptAsync, ImageOptAsyncV2, ImageOptAsyncV3
+from imageopt_async import ImageOptAsync, ImageOptAsyncV2, ImageOptAsyncV3, ImageOptAsyncV4
 
 ORIGIN = os.environ.get('ORIGIN', 'http://localhost:8080')
 
@@ -37,6 +37,13 @@ async def get_image_v2(img: str, req: Request):
 @app.get('/async-libvips-notemp/{img}')
 async def get_image_v3(img: str, req: Request):
     async with ImageOptAsyncV3(f'{ORIGIN}/{img}') as opt:
+        set_optimizations(opt, req)
+        content = await opt.get_bytes()
+        contenttype = opt.ext()
+
+@app.get('/async-libvips/{img}')
+async def get_image_v4(img: str, req: Request):
+    async with ImageOptAsyncV4(f'{ORIGIN}/{img}') as opt:
         set_optimizations(opt, req)
         content = await opt.get_bytes()
         contenttype = opt.ext()

@@ -232,3 +232,36 @@ class ImageOptAsyncV3(ImageOptAsyncV2):
         end_proc = time.time()
         self.state['proc_time'] = (start_proc, end_proc)
         return buffer
+    
+class ImageOptAsyncV4(ImageOptAsync):
+    async def get_bytes(self):
+        await self.load()
+
+        start_proc = time.time()
+        outformat = ImageFormat(self.state['outformat'])
+
+        if 'resize' in self.imageoptions.keys():
+            (width, height) = self.imageoptions['resize']
+            if height <= 0:
+                img = pyvips.Image.thumbnail(self.state['tempfile'], width)
+            else:
+                img = pyvips.Image.thumbnail(self.state['tempfile'], width, height=height)
+        else:
+            img = pyvips.Image.new_from_file(self.state['tempfile'])
+
+        if 'webp' in self.imageoptions.keys() and self.imageoptions['webp']:
+            outformat = ImageFormat.WEBP
+        
+        if outformat == ImageFormat.PNG:
+            buffer = img.pngsave_buffer()
+        elif outformat == ImageFormat.WEBP:
+            buffer = img.webpsave_buffer()
+        elif outformat == ImageFormat.JPEG:
+            if 'quality' in self.imageoptions.keys() and outformat == ImageFormat.JPEG:
+                buffer = img.jpegsave_buffer(Q=self.imageoptions['quality'])
+            else:
+                buffer = img.jpegsave_buffer()
+
+        end_proc = time.time()
+        self.state['proc_time'] = (start_proc, end_proc)
+        return buffer
