@@ -206,15 +206,16 @@ class ImageOptAsyncV3(ImageOptAsyncV2):
         await self.load()
 
         start_proc = time.time()
-        img = pyvips.Image.new_from_buffer(self.state['tempfile'], options="")
         outformat = ImageFormat(self.state['outformat'])
 
         if 'resize' in self.imageoptions.keys():
             (width, height) = self.imageoptions['resize']
             if height <= 0:
-                img = img.thumbnail_image(width)
+                img = pyvips.Image.thumbnail_buffer(self.state['tempfile'], width)
             else:
-                img = img.thumbnail_image(width, height=height)
+                img = pyvips.Image.thumbnail_buffer(self.state['tempfile'], width, height=height)
+        else:
+            img = pyvips.Image.new_from_buffer(self.state['tempfile'])
 
         if 'webp' in self.imageoptions.keys() and self.imageoptions['webp']:
             outformat = ImageFormat.WEBP
