@@ -293,7 +293,7 @@ async def main_test_basic():
     await perftest(images, perftest4, 'AsyncIO ImageMagick (wand) with temp file')
     await perftest(images, perftest5, 'AsyncIO ImageMagick (wand) In-memory')
     await perftest(images, perftest6, 'AsyncIO libvips (pyvips) In-memory')
-    await perftest(images, perftest6, 'AsyncIO libvips (pyvips) with temp file')
+    #await perftest(images, perftest7, 'AsyncIO libvips (pyvips) with temp file')
 
 async def main_test_bulk():
     images = [i for i in os.listdir(BUCKET_DIR) if i.endswith(('.jpeg', '.jpg', '.png', '.webp'))]
@@ -301,7 +301,7 @@ async def main_test_bulk():
     await perftest(images, perftest8, 'Bulk SyncIO ImageMagick (wand) with temp file')
     await perftest(images, perftest9, 'Bulk AsyncIO ImageMagick (wand) In-memory')
     await perftest(images, perftest10, 'Bulk AsyncIO libvips (pyvips) In-memory')
-    await perftest(images, perftest11, 'Bulk AsyncIO libvips (pyvips) with temp file')
+    #await perftest(images, perftest11, 'Bulk AsyncIO libvips (pyvips) with temp file')
 
 if __name__ == '__main__':
     if not os.path.exists('output'):

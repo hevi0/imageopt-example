@@ -1,7 +1,6 @@
 import asyncio
 import os
 from fastapi import FastAPI, Response
-from fastapi.staticfiles import StaticFiles
 
 BUCKET_DIR = os.environ.get('BUCKET_DIR', 'bucket')
 SIMULATED_LATENCY = os.environ.get('SIMULATED_LATENCY', 0.050)

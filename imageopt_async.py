@@ -208,6 +208,8 @@ class ImageOptAsyncV3(ImageOptAsyncV2):
         start_proc = time.time()
         outformat = ImageFormat(self.state['outformat'])
 
+        # use vips_thumbnail() and vips_thumbnail_buffer() for best resize performance
+        # https://github.com/libvips/libvips/wiki/HOWTO----Image-shrinking
         if 'resize' in self.imageoptions.keys():
             (width, height) = self.imageoptions['resize']
             if height <= 0:
@@ -241,6 +243,8 @@ class ImageOptAsyncV4(ImageOptAsync):
         start_proc = time.time()
         outformat = ImageFormat(self.state['outformat'])
 
+        # use vips_thumbnail() and vips_thumbnail_buffer() for best resize performance
+        # https://github.com/libvips/libvips/wiki/HOWTO----Image-shrinking
         if 'resize' in self.imageoptions.keys():
             (width, height) = self.imageoptions['resize']
             if height <= 0:
