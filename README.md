@@ -1,3 +1,5 @@
+This is example code for a post on my personal website about optimizing an image caching microservice: https://hevi0.github.io/optimizing-an-image-resizing-service/
+
 # For local dev on OSX
 Installing all of this can take a little while as `brew` builds these packages.
 
